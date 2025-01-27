@@ -1,5 +1,7 @@
 # Instalação
 
-Copie o arquivo client.js
+## instale o nodejs
 
-rode ele no terminal cmd ou de sua preferencia.
+## Copie o arquivo client.js
+
+** Rode ele no terminal usando o comando ```node client.js```.

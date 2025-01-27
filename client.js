@@ -1,7 +1,7 @@
-import io from "socket.io-client";
-import readline from "readline";
 import chalk from "chalk"; // Usando import
-const socket = io("http://localhost:3000");
+import readline from "readline";
+import io from "socket.io-client";
+const socket = io("https://terminal-chat-production-16e8.up.railway.app/");
 
 let clientId = "";
 let userColor = chalk.white; // Cor padrão para o usuário

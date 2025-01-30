@@ -71,6 +71,16 @@ io.on("connection", (socket) => {
   });
 });
 
+// Evento para mostrar quem está digitando
+socket.on("typing", (userId) => {
+  socket.broadcast.emit("showTyping", userId);
+});
+
+// Evento para remover a indicação de digitação
+socket.on("stopTyping", (userId) => {
+  socket.broadcast.emit("hideTyping", userId);
+});
+
 const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

@@ -5,9 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Online</title>
+    <!-- CDN para o EmojiMart (ajustado) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart/css/emoji-mart.css" />
+
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/wavesurfer.js"></script> <!-- Adicionando WaveSurfer -->
+
+    <style>
+        #emojiPicker {
+            position: absolute;
+            bottom: 70px;
+            /* Ajuste conforme necessário */
+            right: 10px;
+            z-index: 1000;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-900 text-white flex items-center justify-center h-screen gap-10">
@@ -15,26 +28,38 @@
         <div id="messages" class="h-80 overflow-y-auto p-2 border-b border-gray-700"></div>
 
         <!-- Caixa de entrada de mensagem -->
-        <div class="mt-4 flex">
+        <div class=" flex">
+            <div>
+                <div id="typingIndicator" class="text-gray-400 text-sm mt-2"></div>
+            </div>
             <input id="messageInput" type="text"
                 class="flex-1 p-2 rounded-l-lg bg-gray-700 border border-gray-600 text-white focus:outline-none"
                 placeholder="Digite sua mensagem...">
             <button id="sendButton" class="px-4 py-2 bg-blue-600 rounded-r-lg hover:bg-blue-700">Enviar</button>
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center mt-4">
             <!-- Controles de Áudio -->
-            <div class="mt-4 flex items-center gap-2">
+            <div class=" flex items-center gap-2">
                 <button id="recordBtn" class="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700">🎤 Gravar Áudio</button>
                 <button id="sendAudioBtn" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 hidden">
                     📤 Enviar Áudio
                 </button>
             </div>
-            <div class="mt-4 flex items-center gap-2">
+            <div class=" flex items-center gap-2">
                 <!-- Caixa de entrada de imagem/GIF -->
                 <input id="imageInput" type="file" accept="image/*,video/*" class="hidden" />
                 <button id="sendImageBtn" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700">📤 Enviar
                     Imagem/GIF</button>
+            </div>
+            <div class="flex gap-2 relative ">
+                <!-- Botão para abrir o seletor de emojis -->
+                <button id="emojiBtn" class="px-4 py-2 bg-yellow-400 rounded-lg hover:bg-yellow-500">😊</button>
+
+                <!-- Container para o seletor de emojis -->
+                <div id="emojiPicker" class="hidden absolute bottom-full left-0 mb-2 z-10">
+                    <div id="emojiContainer"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -44,7 +69,7 @@
         <ul id="users" class="mt-2"></ul>
 
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
     <script>
         const socket = io("https://terminal-chat-production-16e8.up.railway.app/");
         let clientId = "";
@@ -245,22 +270,30 @@
 
                 reader.onloadend = () => {
                     const imageData = reader.result; // Dados da imagem ou GIF em base64
-                    socket.emit("imageMessage", { imageData, sender: clientId }); // Envia a imagem com o remetente
-                    addImageMessage(imageData, clientId); // Exibe a imagem no chat
+
+                    // Emitir a imagem junto com o remetente
+                    socket.emit("imageMessage", {
+                        imageData: imageData,
+                        sender: clientId // Usando o ID do cliente como remetente
+                    });
+
+                    //addImageMessage(imageData, clientId); // Exibe a imagem no chat
                 };
             }
         });
+        // Para receber a imagem do servidor
         socket.on("imageMessage", (data) => {
-            addImageMessage(data.imageData, data.sender); // Exibe a imagem com o remetente
+            addImageMessage(data.imageData, data.sender); // Exibe a imagem no chat junto com o remetente
         });
 
 
-        function addImageMessage(imageSrc) {
+
+        // Função para adicionar a imagem no chat
+        function addImageMessage(imageSrc, sender) {
             const messagesDiv = document.getElementById("messages");
             const messageElement = document.createElement("div");
             messageElement.classList.add("p-2", "border", "border-gray-700", "rounded-lg", "mb-2");
 
-            // Adiciona o nome do remetente
             messageElement.innerHTML = `
         <strong class="text-blue-400">${sender}:</strong>
     `;
@@ -273,7 +306,64 @@
             messagesDiv.appendChild(messageElement);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
+
+        // Seletores do DOM
+        const emojiBtn = document.getElementById("emojiBtn");
+        const emojiPicker = document.getElementById("emojiPicker");
+        const emojiContainer = document.getElementById("emojiContainer");
+        const messageInput = document.getElementById("messageInput");
+
+        // Inicializar o seletor de emojis
+        const picker = new EmojiMart.Picker({
+            onSelect: (emoji) => {
+                // Inserir o emoji na caixa de entrada de mensagem
+                messageInput.value += emoji.native;
+                emojiPicker.classList.add("hidden"); // Fechar o seletor após selecionar o emoji
+            }
+        });
+
+        // Inserir o seletor de emojis no container
+        emojiContainer.appendChild(picker);
+
+        // Mostrar/Esconder o seletor de emojis
+        emojiBtn.addEventListener("click", () => {
+            emojiPicker.classList.toggle("hidden");
+        });
+
+        // Fechar o seletor de emojis se clicar fora dele
+        document.addEventListener("click", (event) => {
+            if (!emojiPicker.contains(event.target) && !emojiBtn.contains(event.target)) {
+                emojiPicker.classList.add("hidden");
+            }
+        });
+
+        let typingTimeout;
+        const typingIndicator = document.getElementById("typingIndicator");
+
+        document.getElementById("messageInput").addEventListener("input", () => {
+            clearTimeout(typingTimeout);
+            socket.emit("typing", clientId); // Envia o evento de "digitando"
+
+            typingTimeout = setTimeout(() => {
+                socket.emit("stopTyping", clientId); // Envia o evento de "parou de digitar"
+            }, 2000); // O usuário parou de digitar após 1 segundo
+        });
+
+        socket.on("showTyping", (userId) => {
+            // Exibe a mensagem de que o usuário está digitando
+            if (userId !== clientId) {
+                typingIndicator.textContent = `${userId} está digitando...`;
+            }
+        });
+
+        socket.on("hideTyping", (userId) => {
+            // Remove a mensagem de digitação
+            if (userId !== clientId) {
+                typingIndicator.textContent = '';
+            }
+        });
     </script>
+
 </body>
 
 </html>

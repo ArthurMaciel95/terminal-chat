@@ -58,9 +58,9 @@
                     Imagem/GIF</button>
             </div>
             <!-- Botão para ativar a câmera -->
-            <button id="startWebcam" class="bg-blue-500 text-white p-2 rounded-lg">
+            <!-- <button id="startWebcam" class="bg-blue-500 text-white p-2 rounded-lg">
                 Ativar Webcam
-            </button>
+            </button> -->
             <div class="flex gap-2 relative ">
                 <!-- Botão para abrir o seletor de emojis -->
                 <button id="emojiBtn" class="px-4 py-2 bg-yellow-400 rounded-lg hover:bg-yellow-500">😊</button>
@@ -112,7 +112,7 @@
         // Botões e elementos
         const recordBtn = document.getElementById("recordBtn");
         const sendAudioBtn = document.getElementById("sendAudioBtn");
-        const startWebcamButton = document.getElementById("startWebcam");
+        // const startWebcamButton = document.getElementById("startWebcam");
         const webcamsContainer = document.getElementById("webcamsContainer");
         // Elemento para a lista de usuários
         const usersList = document.getElementById("users");
@@ -168,7 +168,7 @@
         // }
 
         // Quando o botão for clicado, chama a função para ativar a webcam
-        startWebcamButton.addEventListener("click", startWebcam);
+        // startWebcamButton.addEventListener("click", startWebcam);
 
         // Quando um novo usuário se conectar, cria-se uma coluna para o vídeo dele
         socket.on("new_user", (userId) => {
@@ -372,10 +372,7 @@
                     cameraIcon.style.cursor = "pointer"; // Deixa o ícone clicável
                     cameraIcon.style.marginLeft = "10px"; // Espaçamento para o ícone
 
-                    // Adiciona o ouvinte de evento de clique no ícone de câmera
-                    cameraIcon.addEventListener("click", () => {
-                        startCall(userId); // Inicia a chamada para o usuário clicado
-                    });
+
 
                     // Adiciona o ícone de câmera ao item de lista
                     li.appendChild(cameraIcon);
@@ -550,154 +547,106 @@
         async function startWebcam() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+                if (!localStream) {
+                    console.error("Erro ao capturar a webcam.");
+                    return;
+                }
+
                 const videoElement = document.createElement('video');
                 videoElement.srcObject = localStream;
                 videoElement.autoplay = true;
                 videoElement.muted = true;
                 document.getElementById("webcamsContainer").appendChild(videoElement);
 
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then((stream) => {
-                        // Verifica se o stream foi obtido corretamente
-                        console.log(stream)
-                        if (webcamElement) {
-                            webcamElement.srcObject = stream; // Atribui o fluxo da webcam ao elemento de vídeo
-                        } else {
-                            console.error('Elemento de vídeo não encontrado.');
-                        }
-                    })
-                    .catch((error) => {
-                        console.error('Erro ao acessar a câmera: ', error);
-                    });
+                console.log("Webcam iniciada com sucesso!");
             } catch (error) {
-                console.error('Erro ao acessar a câmera: ', error);
+                console.error("Erro ao acessar a câmera:", error);
             }
         }
 
 
 
 
-        function startCall(toUserId) {
+        async function startCall(toUserId) {
+            if (!localStream) {
+                console.error("Erro: localStream não está inicializado. Iniciando agora...");
+                alert("Ativando a webcam...");
+                await startWebcam();
+            }
+
             peerConnection = new RTCPeerConnection(serverConfig);
 
-            // Adiciona o stream local à conexão
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-            // Cria uma oferta (SDP)
-            peerConnection.createOffer()
-                .then(offer => {
-                    return peerConnection.setLocalDescription(offer); // Define a descrição local com a oferta
-                })
-                .then(() => {
-                    // Envia a oferta para o servidor, que repassa para o usuário de destino
-                    socket.emit("offer", peerConnection.localDescription, toUserId);
-                })
-                .catch(err => console.error("Erro ao criar oferta:", err));
-
-            // Lida com candidatos ICE
             peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    // Envia os candidatos ICE para o servidor
-                    socket.emit("ice-candidate", event.candidate, toUserId);
-                }
+                if (event.candidate) socket.emit("ice-candidate", event.candidate, toUserId);
             };
 
-            // Recebe o stream remoto do outro usuário
-            peerConnection.ontrack = (event) => {
-                const remoteVideo = document.createElement('video');
-                remoteVideo.srcObject = event.streams[0];
-                remoteVideo.autoplay = true;
-                document.getElementById("remoteWebcam").appendChild(remoteVideo);
-            };
+            peerConnection.ontrack = event => showRemoteVideo(event.streams[0]);
+
+            peerConnection.createOffer().then(offer => {
+                return peerConnection.setLocalDescription(offer);
+            }).then(() => {
+                socket.emit("offer", peerConnection.localDescription, toUserId);
+            }).catch(err => console.error("Erro ao criar oferta:", err));
         }
 
-        // Evento de recebimento de uma oferta de chamada
-        socket.on("offer", (offer, fromUserId) => {
-            showIncomingCallPopup(fromUserId, offer);
-        });
+        function showRemoteVideo(stream) {
+            const remoteVideo = document.createElement('video');
+            remoteVideo.srcObject = stream;
+            remoteVideo.autoplay = true;
+            remoteWebcam.appendChild(remoteVideo);
+        }
 
-        function showRequesetCallPopup(fromUserId) {
-            // Criar o popup
+        // Exibir popup de chamada recebida
+        socket.on("offer", (offer, fromUserId) => showIncomingCallPopup(fromUserId, offer));
+        function showIncomingCallPopup(fromUserId, offer) {
             const callPopup = document.createElement("div");
+            startRinging();
             callPopup.id = "callPopup";
             callPopup.classList.add("fixed", "top-0", "left-0", "w-full", "h-full", "flex", "items-center", "justify-center", "bg-gray-900", "bg-opacity-75");
-
             callPopup.innerHTML = `
         <div class="bg-white p-5 rounded-lg shadow-lg text-center">
-            <p class="text-lg font-bold text-black">Ligando para ${fromUserId}</p>
-        </div>
-        `
-            document.body.appendChild(callPopup);
-        }
-
-
-        // Função para exibir o popup de chamada recebida
-        function showIncomingCallPopup(fromUserId, offer) {
-            // Criar o popup
-            startRinging(); // Inicia o som da chamada
-            const callPopup = document.createElement("div");
-            callPopup.id = "callPopup";
-            callPopup.classList.add("fixed", "top-0", "left-0", "w-full", "h-full", "flex", "items-center", "justify-center", "bg-gray-900", "bg-opacity-75");
-
-            callPopup.innerHTML = `
-                < div class="bg-white p-5 rounded-lg shadow-lg text-center" >
             <p class="text-lg font-bold text-black">${fromUserId} está te ligando...</p>
             <div class="mt-4 flex justify-center space-x-4">
-                <button id="acceptCall" class="bg-green-500 text-white px-4 py-2 rounded">Aceitar</button>
-                <button id="rejectCall" class="bg-red-500 text-white px-4 py-2 rounded">Rejeitar</button>
+                <button id="acceptCall" onclick="" class="bg-green-500 text-white px-4 py-2 rounded">Aceitar</button>
+                <button id="rejectCall" onclick="" class="bg-red-500 text-white px-4 py-2 rounded">Rejeitar</button>
             </div>
-        </div >
+        </div>
     `;
-
             document.body.appendChild(callPopup);
-
-            // Botão para aceitar a chamada
-            document.getElementById("acceptCall").addEventListener("click", () => {
-                acceptCall(offer, fromUserId);
-                document.body.removeChild(callPopup);
+            // Lógica para aceitar a chamada
+            document.getElementById("acceptCall").addEventListener("click", async () => {
+                await startCall();  // Função para iniciar a webcam
+                acceptCall(offer, fromUserId);  // Função para aceitar a chamada
+                document.body.removeChild(callPopup);  // Remove o popup
             });
-
-            // Botão para rejeitar a chamada
             document.getElementById("rejectCall").addEventListener("click", () => {
                 document.body.removeChild(callPopup);
-                socket.emit("call_rejected", fromUserId); // Notifica que a chamada foi rejeitada
+                socket.emit("call_rejected", fromUserId);
             });
         }
 
-        // Evento de recebimento de uma oferta de chamada
-        socket.on("offer", (offer, fromUserId) => {
-            showIncomingCallPopup(fromUserId, offer);
+        socket.on("call_rejected", (callerId) => {
+            alert(`A chamada de ${callerId} foi rejeitada.`);
+            // Aqui você pode adicionar mais lógica para tratar a rejeição da chamada.
         });
 
-        // Modificado para esperar a câmera antes de aceitar a chamada
-        async function acceptCall(offer, fromUserId, stream) {
+        async function acceptCall(offer, fromUserId) {
             peerConnection = new RTCPeerConnection(serverConfig);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit("answer", peerConnection.localDescription, fromUserId);
+            peerConnection.onicecandidate = event => { if (event.candidate) socket.emit("ice-candidate", event.candidate, fromUserId); };
+            peerConnection.ontrack = event => showRemoteVideo(event.streams[0]);
+        }
 
-            // Adiciona o stream local
-            stream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, stream);
-            });
+        async function rejectcall() {
+            socket.emit("call_rejected", fromUserId);
 
-            peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-                .then(() => peerConnection.createAnswer())
-                .then(answer => peerConnection.setLocalDescription(answer))
-                .then(() => socket.emit("answer", peerConnection.localDescription, fromUserId))
-                .catch(err => console.error("Erro ao aceitar chamada:", err));
-
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    socket.emit("ice-candidate", event.candidate, fromUserId);
-                }
-            };
-
-            peerConnection.ontrack = (event) => {
-                const remoteVideo = document.createElement('video');
-                remoteVideo.srcObject = event.streams[0];
-                remoteVideo.autoplay = true;
-                document.getElementById("remoteWebcam").appendChild(remoteVideo);
-            };
         }
 
         // Evento para receber a oferta de um usuário (enviada pelo servidor)

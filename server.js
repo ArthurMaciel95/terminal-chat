@@ -97,6 +97,17 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("call_rejected", (fromUserId) => {
+    console.log(
+      `Chamada rejeitada por: ${socket.id} (para o usuário: ${fromUserId})`
+    );
+
+    // Envia uma mensagem para o usuário de origem notificando que a chamada foi rejeitada
+    if (clients[fromUserId]) {
+      clients[fromUserId].emit("call_rejected", socket.id); // Envia o ID do remetente
+    }
+  });
+
   // Quando um cliente se desconecta
   socket.on("disconnect", () => {
     delete clients[socket.id];

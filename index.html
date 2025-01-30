@@ -89,6 +89,19 @@
         let recordingTimeout;
         const messageSound = new Audio('noti.mp3');
         const typingSound = new Audio('typing.mp3')
+        const callingSound = new Audio('calling.mp3')
+
+
+        callingSound.loop = true; // Define para tocar em loop
+
+        function startRinging() {
+            callingSound.play().catch(error => console.error("Erro ao reproduzir som:", error));
+        }
+
+        function stopRinging() {
+            callingSound.pause();
+            callingSound.currentTime = 0; // Reinicia o som para o começo
+        }
 
         // Função para parar o som
         function stopTypingSound() {
@@ -111,48 +124,48 @@
         let mediaStream = null;
 
         // Função para acessar a webcam do usuário
-        function startWebcam() {
-            // Verifica se o stream já foi iniciado
-            if (mediaStream) {
-                alert('Câmera já está ativa.');
-                console.log('Câmera já está ativa.');
-                return; // Se já tiver um stream, não faz nada
-            }
+        // function startWebcam() {
+        // Verifica se o stream já foi iniciado
+        // if (mediaStream) {
+        //     alert('Câmera já está ativa.');
+        //     console.log('Câmera já está ativa.');
+        //     return; // Se já tiver um stream, não faz nada
+        // }
 
-            // Solicita a permissão para usar a câmera do usuário
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then((stream) => {
-                    // Verifica se o elemento de vídeo já existe, se não, cria um novo
-                    if (!videoElement) {
-                        videoElement = document.createElement('video');
-                        videoElement.autoplay = true;
-                        videoElement.muted = true; // Muta o vídeo para evitar feedback de áudio
-                        videoElement.id = "myWebcam";
-                        videoElement.classList.add('w-full', 'h-auto', 'rounded-lg', 'border', 'border-gray-700');
-                    }
+        // Solicita a permissão para usar a câmera do usuário
+        //     navigator.mediaDevices.getUserMedia({ video: true })
+        //         .then((stream) => {
+        //             // Verifica se o elemento de vídeo já existe, se não, cria um novo
+        //             if (!videoElement) {
+        //                 videoElement = document.createElement('video');
+        //                 videoElement.autoplay = true;
+        //                 videoElement.muted = true; // Muta o vídeo para evitar feedback de áudio
+        //                 videoElement.id = "webcam";
+        //                 videoElement.classList.add('w-full', 'h-auto', 'rounded-lg', 'border', 'border-gray-700');
+        //             }
 
-                    // Atribui o stream de vídeo ao elemento de vídeo
-                    videoElement.srcObject = stream;
+        //             // Atribui o stream de vídeo ao elemento de vídeo
+        //             videoElement.srcObject = stream;
 
-                    // Cria uma coluna para este vídeo
-                    const webcamColumn = document.createElement('div');
-                    webcamColumn.classList.add('video-column', 'w-full', 'lg:w-1/3'); // Controle de colunas (responsivo)
-                    webcamColumn.appendChild(videoElement);
+        //             // Cria uma coluna para este vídeo
+        //             const webcamColumn = document.createElement('div');
+        //             webcamColumn.classList.add('video-column', 'w-full', 'lg:w-1/3'); // Controle de colunas (responsivo)
+        //             webcamColumn.appendChild(videoElement);
 
-                    // Adiciona a coluna de vídeo no container
-                    const webcamsContainer = document.getElementById('webcamsContainer'); // Certifique-se de ter esse container no HTML
-                    webcamsContainer.appendChild(webcamColumn);
+        //             // Adiciona a coluna de vídeo no container
+        //             const webcamsContainer = document.getElementById('webcamsContainer'); // Certifique-se de ter esse container no HTML
+        //             webcamsContainer.appendChild(webcamColumn);
 
-                    // Salva o stream para evitar múltiplas conexões
-                    mediaStream = stream;
+        //             // Salva o stream para evitar múltiplas conexões
+        //             mediaStream = stream;
 
-                    // Envia o stream para o servidor assim que o vídeo for adicionado
-                    socket.emit("new_user", { clientId, stream });
-                })
-                .catch((error) => {
-                    console.error('Erro ao acessar a câmera: ', error);
-                });
-        }
+        //             // Envia o stream para o servidor assim que o vídeo for adicionado
+        //             socket.emit("new_user", { clientId, stream });
+        //         })
+        //         .catch((error) => {
+        //             console.error('Erro ao acessar a câmera: ', error);
+        //         });
+        // }
 
         // Quando o botão for clicado, chama a função para ativar a webcam
         startWebcamButton.addEventListener("click", startWebcam);
@@ -160,21 +173,7 @@
         // Quando um novo usuário se conectar, cria-se uma coluna para o vídeo dele
         socket.on("new_user", (userId) => {
             console.log(`Novo usuário conectado: ${userId}`);
-            // Cria uma nova coluna para o vídeo do novo usuário
-            const webcamColumn = document.createElement('div');
-            webcamColumn.classList.add('video-column', 'w-full', 'lg:w-1/3'); // Controle de colunas
 
-            const videoElement = document.createElement('video');
-            videoElement.id = `userVideo_${userId}`;
-            videoElement.autoplay = true;
-            videoElement.muted = true; // Para evitar o feedback de áudio
-
-            // Adiciona o vídeo à coluna
-            webcamColumn.appendChild(videoElement);
-            webcamsContainer.appendChild(webcamColumn);
-
-            // Solicita o vídeo do novo usuário
-            socket.emit("request_video_stream", userId);
         });
 
         // Quando o servidor enviar o stream de vídeo de outro usuário
@@ -358,10 +357,37 @@
             usersUl.innerHTML = ""; // Limpa a lista antes de atualizar
 
             userList.forEach(userId => {
-                userColor = generateColorFromId(userId); // Obtém a cor do usuário = generateColorFromId(sender); // Obtém a cor do usuário
+                userColor = generateColorFromId(userId); // Obtém a cor do usuário
+
                 const li = document.createElement("li");
                 li.textContent = userId;
-                li.style.color = userColor
+                li.style.color = userColor;
+
+
+                // Verifica se o ID não é o do próprio usuário antes de adicionar o ícone
+                if (userId !== socket.id) {
+                    // Cria um ícone de câmera
+                    const cameraIcon = document.createElement("span");
+                    cameraIcon.innerHTML = "🎥"; // Ícone de câmera (pode ser substituído por Font Awesome ou outra biblioteca)
+                    cameraIcon.style.cursor = "pointer"; // Deixa o ícone clicável
+                    cameraIcon.style.marginLeft = "10px"; // Espaçamento para o ícone
+
+                    // Adiciona o ouvinte de evento de clique no ícone de câmera
+                    cameraIcon.addEventListener("click", () => {
+                        startCall(userId); // Inicia a chamada para o usuário clicado
+                    });
+
+                    // Adiciona o ícone de câmera ao item de lista
+                    li.appendChild(cameraIcon);
+                    // Adiciona o ouvinte de evento de clique no ícone de câmera
+                    cameraIcon.addEventListener("click", () => {
+                        startCall(userId); // Inicia a chamada para o usuário que foi clicado
+                    });
+                }
+
+
+
+
                 usersUl.appendChild(li);
             });
         });
@@ -514,24 +540,12 @@
             return color;
         }
 
-        // Elemento de vídeo onde será exibido o vídeo da webcam
-        const webcamElement = document.getElementById('webcam');
-
-        // Função para acessar a webcam
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then((stream) => {
-                // Atribui o fluxo da webcam ao elemento de vídeo
-                webcamElement.srcObject = stream;
-            })
-            .catch((error) => {
-                console.error('Erro ao acessar a câmera: ', error);
-            });
 
         // Variáveis globais
         let localStream;
         let peerConnection;
         const serverConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }; // Configuração STUN
-
+        const webcamElement = document.getElementById('webcam'); // Certifique-se de que o ID do elemento de vídeo está correto
         // Função para acessar a webcam do usuário
         async function startWebcam() {
             try {
@@ -540,13 +554,29 @@
                 videoElement.srcObject = localStream;
                 videoElement.autoplay = true;
                 videoElement.muted = true;
-                document.getElementById("myWebcam").appendChild(videoElement);
+                document.getElementById("webcamsContainer").appendChild(videoElement);
+
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then((stream) => {
+                        // Verifica se o stream foi obtido corretamente
+                        console.log(stream)
+                        if (webcamElement) {
+                            webcamElement.srcObject = stream; // Atribui o fluxo da webcam ao elemento de vídeo
+                        } else {
+                            console.error('Elemento de vídeo não encontrado.');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Erro ao acessar a câmera: ', error);
+                    });
             } catch (error) {
                 console.error('Erro ao acessar a câmera: ', error);
             }
         }
 
-        // Função para iniciar uma chamada de vídeo com outro usuário
+
+
+
         function startCall(toUserId) {
             peerConnection = new RTCPeerConnection(serverConfig);
 
@@ -555,24 +585,26 @@
                 peerConnection.addTrack(track, localStream);
             });
 
-            // Cria uma oferta
+            // Cria uma oferta (SDP)
             peerConnection.createOffer()
                 .then(offer => {
-                    return peerConnection.setLocalDescription(offer);
+                    return peerConnection.setLocalDescription(offer); // Define a descrição local com a oferta
                 })
                 .then(() => {
+                    // Envia a oferta para o servidor, que repassa para o usuário de destino
                     socket.emit("offer", peerConnection.localDescription, toUserId);
                 })
-                .catch(err => console.error(err));
+                .catch(err => console.error("Erro ao criar oferta:", err));
 
             // Lida com candidatos ICE
             peerConnection.onicecandidate = event => {
                 if (event.candidate) {
+                    // Envia os candidatos ICE para o servidor
                     socket.emit("ice-candidate", event.candidate, toUserId);
                 }
             };
 
-            // Recebe o stream remoto
+            // Recebe o stream remoto do outro usuário
             peerConnection.ontrack = (event) => {
                 const remoteVideo = document.createElement('video');
                 remoteVideo.srcObject = event.streams[0];
@@ -581,51 +613,143 @@
             };
         }
 
-        // Quando a resposta de um outro cliente chegar
+        // Evento de recebimento de uma oferta de chamada
         socket.on("offer", (offer, fromUserId) => {
-            peerConnection = new RTCPeerConnection(serverConfig);
-            peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-
-            // Adiciona o stream local à conexão
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-
-            // Cria uma resposta (answer)
-            peerConnection.createAnswer()
-                .then(answer => {
-                    return peerConnection.setLocalDescription(answer);
-                })
-                .then(() => {
-                    socket.emit("answer", peerConnection.localDescription, fromUserId);
-                })
-                .catch(err => console.error(err));
-
-            // Lida com candidatos ICE
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    socket.emit("ice-candidate", event.candidate, fromUserId);
-                }
-            };
-
-            // Recebe o stream remoto
-            peerConnection.ontrack = (event) => {
-                const remoteVideo = document.createElement('video');
-                remoteVideo.srcObject = event.streams[0];
-                remoteVideo.autoplay = true;
-                document.getElementById("remoteWebcam").appendChild(remoteVideo);
-            };
+            showIncomingCallPopup(fromUserId, offer);
         });
 
-        // Quando a resposta do outro cliente chegar
+        function showRequesetCallPopup(fromUserId) {
+            // Criar o popup
+            const callPopup = document.createElement("div");
+            callPopup.id = "callPopup";
+            callPopup.classList.add("fixed", "top-0", "left-0", "w-full", "h-full", "flex", "items-center", "justify-center", "bg-gray-900", "bg-opacity-75");
+
+            callPopup.innerHTML = `
+        <div class="bg-white p-5 rounded-lg shadow-lg text-center">
+            <p class="text-lg font-bold text-black">Ligando para ${fromUserId}</p>
+        </div>
+        `
+            document.body.appendChild(callPopup);
+        }
+
+
+        // Função para exibir o popup de chamada recebida
+        function showIncomingCallPopup(fromUserId, offer) {
+            // Criar o popup
+            startRinging(); // Inicia o som da chamada
+            const callPopup = document.createElement("div");
+            callPopup.id = "callPopup";
+            callPopup.classList.add("fixed", "top-0", "left-0", "w-full", "h-full", "flex", "items-center", "justify-center", "bg-gray-900", "bg-opacity-75");
+
+            callPopup.innerHTML = `
+                < div class="bg-white p-5 rounded-lg shadow-lg text-center" >
+            <p class="text-lg font-bold text-black">${fromUserId} está te ligando...</p>
+            <div class="mt-4 flex justify-center space-x-4">
+                <button id="acceptCall" class="bg-green-500 text-white px-4 py-2 rounded">Aceitar</button>
+                <button id="rejectCall" class="bg-red-500 text-white px-4 py-2 rounded">Rejeitar</button>
+            </div>
+        </div >
+    `;
+
+            document.body.appendChild(callPopup);
+
+            // Botão para aceitar a chamada
+            document.getElementById("acceptCall").addEventListener("click", () => {
+                acceptCall(offer, fromUserId);
+                document.body.removeChild(callPopup);
+            });
+
+            // Botão para rejeitar a chamada
+            document.getElementById("rejectCall").addEventListener("click", () => {
+                document.body.removeChild(callPopup);
+                socket.emit("call_rejected", fromUserId); // Notifica que a chamada foi rejeitada
+            });
+        }
+
+        // Evento de recebimento de uma oferta de chamada
+        socket.on("offer", (offer, fromUserId) => {
+            showIncomingCallPopup(fromUserId, offer);
+        });
+
+        // Modificado para esperar a câmera antes de aceitar a chamada
+        async function acceptCall(offer, fromUserId, stream) {
+            peerConnection = new RTCPeerConnection(serverConfig);
+
+            // Adiciona o stream local
+            stream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, stream);
+            });
+
+            peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+                .then(() => peerConnection.createAnswer())
+                .then(answer => peerConnection.setLocalDescription(answer))
+                .then(() => socket.emit("answer", peerConnection.localDescription, fromUserId))
+                .catch(err => console.error("Erro ao aceitar chamada:", err));
+
+            // peerConnection.onicecandidate = event => {
+            //     if (event.candidate) {
+            //         socket.emit("ice-candidate", event.candidate, fromUserId);
+            //     }
+            // };
+
+            // peerConnection.ontrack = (event) => {
+            //     const remoteVideo = document.createElement('video');
+            //     remoteVideo.srcObject = event.streams[0];
+            //     remoteVideo.autoplay = true;
+            //     document.getElementById("remoteWebcam").appendChild(remoteVideo);
+            // };
+        }
+
+        // Evento para receber a oferta de um usuário (enviada pelo servidor)
+        // socket.on("offer", (offer, fromUserId) => {
+        //     peerConnection = new RTCPeerConnection(serverConfig);
+
+        //     // Adiciona o stream local à conexão
+        //     localStream.getTracks().forEach(track => {
+        //         peerConnection.addTrack(track, localStream);
+        //     });
+
+        //     // Define a oferta recebida
+        //     peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+        //     // Cria uma resposta (SDP)
+        //     peerConnection.createAnswer()
+        //         .then(answer => {
+        //             return peerConnection.setLocalDescription(answer); // Define a descrição local com a resposta
+        //         })
+        //         .then(() => {
+        //             // Envia a resposta de volta ao servidor para o usuário que fez a oferta
+        //             socket.emit("answer", peerConnection.localDescription, fromUserId);
+        //         })
+        //         .catch(err => console.error("Erro ao criar resposta:", err));
+
+        //     // Lida com candidatos ICE
+        //     peerConnection.onicecandidate = event => {
+        //         if (event.candidate) {
+        //             // Envia os candidatos ICE para o servidor
+        //             socket.emit("ice-candidate", event.candidate, fromUserId);
+        //         }
+        //     };
+
+        //     // Recebe o stream remoto do outro usuário
+        //     peerConnection.ontrack = (event) => {
+        //         const remoteVideo = document.createElement('video');
+        //         remoteVideo.srcObject = event.streams[0];
+        //         remoteVideo.autoplay = true;
+        //         document.getElementById("remoteWebcam").appendChild(remoteVideo);
+        //     };
+        // });
+
+        // Evento para receber a resposta de um usuário (enviada pelo servidor)
         socket.on("answer", (answer, fromUserId) => {
             peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
         });
 
-        // Recebe o candidato ICE
+        // Evento para receber os candidatos ICE de outro usuário
         socket.on("ice-candidate", (candidate, fromUserId) => {
             peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
         });
+
     </script>
 
 </body>

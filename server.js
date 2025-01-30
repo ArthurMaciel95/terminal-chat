@@ -86,6 +86,30 @@ io.on("connection", (socket) => {
     socket.stream = stream; // Armazena o stream recebido para esse usuário
   });
 
+  // Evento de sinalização - Oferta (SDP)
+  socket.on("offer", (offer, toUserId) => {
+    // Envia a oferta (SDP) para o cliente de destino
+    if (clients[toUserId]) {
+      clients[toUserId].emit("offer", offer, socket.id); // Envia a oferta e o id do remetente
+    }
+  });
+
+  // Evento de sinalização - Resposta (SDP)
+  socket.on("answer", (answer, toUserId) => {
+    // Envia a resposta (SDP) para o cliente de destino
+    if (clients[toUserId]) {
+      clients[toUserId].emit("answer", answer, socket.id); // Envia a resposta e o id do remetente
+    }
+  });
+
+  // Evento de sinalização - Candidato ICE
+  socket.on("ice-candidate", (candidate, toUserId) => {
+    // Envia os candidatos ICE para o cliente de destino
+    if (clients[toUserId]) {
+      clients[toUserId].emit("ice-candidate", candidate, socket.id);
+    }
+  });
+
   // Quando um cliente se desconecta
   socket.on("disconnect", () => {
     delete clients[socket.id];

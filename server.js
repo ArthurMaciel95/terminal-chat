@@ -63,22 +63,22 @@ io.on("connection", (socket) => {
     });
   });
 
+  // Evento para mostrar quem está digitando
+  socket.on("typing", (userId) => {
+    socket.broadcast.emit("showTyping", userId);
+  });
+
+  // Evento para remover a indicação de digitação
+  socket.on("stopTyping", (userId) => {
+    socket.broadcast.emit("hideTyping", userId);
+  });
+
   // Quando um cliente se desconecta
   socket.on("disconnect", () => {
     delete clients[socket.id];
     console.log(`Cliente desconectado: ${socket.id}`);
     io.emit("update_users", Object.keys(clients)); // Atualiza todos os clientes com a nova lista de usuários
   });
-});
-
-// Evento para mostrar quem está digitando
-socket.on("typing", (userId) => {
-  socket.broadcast.emit("showTyping", userId);
-});
-
-// Evento para remover a indicação de digitação
-socket.on("stopTyping", (userId) => {
-  socket.broadcast.emit("hideTyping", userId);
 });
 
 const PORT = 3000;

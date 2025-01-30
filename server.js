@@ -42,7 +42,8 @@ io.on("connection", (socket) => {
         });
       }
     } else {
-      socket.broadcast.emit("message", { id: socket.id, message: msg });
+      // Agora todos, incluindo o remetente, receberão a mensagem
+      io.emit("message", { id: socket.id, message: msg });
     }
   });
 

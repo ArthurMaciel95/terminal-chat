@@ -2,7 +2,12 @@ import { Server } from "socket.io";
 import http from "http";
 
 const server = http.createServer();
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Permite conexões de qualquer origem (pode restringir a um domínio específico)
+    methods: ["GET", "POST"],
+  },
+});
 
 let clients = {}; // Objeto para armazenar os clientes conectados
 
@@ -30,9 +35,9 @@ io.on("connection", (socket) => {
           message: `${clientList}`,
         });
       } else {
-        //comando não encontrando
+        // Comando não encontrado
         socket.emit("message", {
-          id: "",
+          id: "Servidor",
           message: "Comando não encontrado",
         });
       }

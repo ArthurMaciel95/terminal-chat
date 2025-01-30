@@ -607,8 +607,11 @@
             callPopup.id = "callPopup";
             callPopup.classList.add("fixed", "top-0", "left-0", "w-full", "h-full", "flex", "items-center", "justify-center", "bg-gray-900", "bg-opacity-75");
             callPopup.innerHTML = `
-        <div class="bg-white p-5 rounded-lg shadow-lg text-center">
-            <p class="text-lg font-bold text-black">${fromUserId} está te ligando...</p>
+        <div class="bg-gray-700 p-5 rounded-lg shadow-lg text-center">
+            <div class="flex items-center justify-center bg-gray-700 rounded-lg mb-4">
+                <img src="/public/img/bob-esponja-dancando.gif" class="w-24 h-24 rounded-lg" alt="Avatar">
+            </div>
+            <p class="text-lg font-bold text-white">${fromUserId} está te ligando...</p>
             <div class="mt-4 flex justify-center space-x-4">
                 <button id="acceptCall" onclick="" class="bg-green-500 text-white px-4 py-2 rounded">Aceitar</button>
                 <button id="rejectCall" onclick="" class="bg-red-500 text-white px-4 py-2 rounded">Rejeitar</button>
@@ -619,11 +622,13 @@
             // Lógica para aceitar a chamada
             document.getElementById("acceptCall").addEventListener("click", async () => {
                 await startCall();  // Função para iniciar a webcam
+                stopRinging();
                 acceptCall(offer, fromUserId);  // Função para aceitar a chamada
                 document.body.removeChild(callPopup);  // Remove o popup
             });
             document.getElementById("rejectCall").addEventListener("click", () => {
                 document.body.removeChild(callPopup);
+                stopRinging();
                 socket.emit("call_rejected", fromUserId);
             });
         }

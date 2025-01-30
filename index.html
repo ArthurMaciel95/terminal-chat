@@ -686,18 +686,18 @@
                 .then(() => socket.emit("answer", peerConnection.localDescription, fromUserId))
                 .catch(err => console.error("Erro ao aceitar chamada:", err));
 
-            // peerConnection.onicecandidate = event => {
-            //     if (event.candidate) {
-            //         socket.emit("ice-candidate", event.candidate, fromUserId);
-            //     }
-            // };
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    socket.emit("ice-candidate", event.candidate, fromUserId);
+                }
+            };
 
-            // peerConnection.ontrack = (event) => {
-            //     const remoteVideo = document.createElement('video');
-            //     remoteVideo.srcObject = event.streams[0];
-            //     remoteVideo.autoplay = true;
-            //     document.getElementById("remoteWebcam").appendChild(remoteVideo);
-            // };
+            peerConnection.ontrack = (event) => {
+                const remoteVideo = document.createElement('video');
+                remoteVideo.srcObject = event.streams[0];
+                remoteVideo.autoplay = true;
+                document.getElementById("remoteWebcam").appendChild(remoteVideo);
+            };
         }
 
         // Evento para receber a oferta de um usuário (enviada pelo servidor)

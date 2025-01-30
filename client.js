@@ -45,6 +45,10 @@ rl.on("line", (input) => {
   showPrompt(); // Mostra o prompt novamente após enviar
 });
 
+socket.on("imageMessage", (imageData) => {
+  addImageMessage(imageData); // Exibe a imagem no chat
+});
+
 // Escuta mensagens de outros clientes
 socket.on("message", (data) => {
   // Limpa a linha anterior e reposiciona o cursor

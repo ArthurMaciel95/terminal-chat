@@ -22,12 +22,20 @@
             <button id="sendButton" class="px-4 py-2 bg-blue-600 rounded-r-lg hover:bg-blue-700">Enviar</button>
         </div>
 
-        <!-- Controles de Áudio -->
-        <div class="mt-4 flex items-center gap-2">
-            <button id="recordBtn" class="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700">🎤 Gravar Áudio</button>
-            <button id="sendAudioBtn" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 hidden">
-                📤 Enviar Áudio
-            </button>
+        <div class="flex gap-2">
+            <!-- Controles de Áudio -->
+            <div class="mt-4 flex items-center gap-2">
+                <button id="recordBtn" class="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700">🎤 Gravar Áudio</button>
+                <button id="sendAudioBtn" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 hidden">
+                    📤 Enviar Áudio
+                </button>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+                <!-- Caixa de entrada de imagem/GIF -->
+                <input id="imageInput" type="file" accept="image/*,video/*" class="hidden" />
+                <button id="sendImageBtn" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700">📤 Enviar
+                    Imagem/GIF</button>
+            </div>
         </div>
     </div>
     <div class="rounded-lg shadow-lg p-6 bg-gray-800 mt-4  min-w-[350px]">
@@ -209,6 +217,53 @@
                 usersUl.appendChild(li);
             });
         });
+
+        // Elementos do DOM
+        const sendImageBtn = document.getElementById("sendImageBtn");
+        const imageInput = document.getElementById("imageInput");
+
+        // Enviar a imagem ou GIF para o servidor
+        sendImageBtn.addEventListener("click", () => {
+            imageInput.click(); // Abre o seletor de arquivos
+        });
+
+        // Tamanho máximo permitido (300 KB)
+        const MAX_FILE_SIZE = 300 * 1024; // 300 KB em bytes
+
+        imageInput.addEventListener("change", (event) => {
+            const file = event.target.files[0];
+
+            if (file) {
+                // Verificar o tamanho do arquivo
+                if (file.size > MAX_FILE_SIZE) {
+                    alert("O arquivo é muito grande. O tamanho máximo permitido é 300 KB.");
+                    return; // Impede o envio do arquivo
+                }
+
+                const reader = new FileReader();
+                reader.readAsDataURL(file); // Converte o arquivo para base64
+
+                reader.onloadend = () => {
+                    const imageData = reader.result; // Dados da imagem ou GIF em base64
+                    socket.emit("imageMessage", imageData); // Envia a imagem para o servidor
+                    addImageMessage(imageData); // Exibe a imagem no chat
+                };
+            }
+        });
+
+        function addImageMessage(imageSrc) {
+            const messagesDiv = document.getElementById("messages");
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("p-2", "border", "border-gray-700", "rounded-lg", "mb-2");
+
+            const imageElement = document.createElement("img");
+            imageElement.src = imageSrc; // Usando a URL base64
+            imageElement.classList.add("max-w-full", "rounded-lg");
+
+            messageElement.appendChild(imageElement);
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
     </script>
 </body>
 

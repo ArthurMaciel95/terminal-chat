@@ -7,9 +7,10 @@
     <title>Chat Online</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/wavesurfer.js"></script> <!-- Adicionando WaveSurfer -->
 </head>
 
-<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen gap-10">
     <div class="w-full max-w-2xl bg-gray-800 p-6 rounded-lg shadow-lg">
         <div id="messages" class="h-80 overflow-y-auto p-2 border-b border-gray-700"></div>
 
@@ -29,6 +30,12 @@
             </button>
         </div>
     </div>
+    <div class="rounded-lg shadow-lg p-6 bg-gray-800 mt-4  min-w-[350px]">
+
+        <h2 class="text-lg font-bold text-blue-400">Usuários Online</h2>
+        <ul id="users" class="mt-2"></ul>
+
+    </div>
 
     <script>
         const socket = io("https://terminal-chat-production-16e8.up.railway.app/");
@@ -41,6 +48,9 @@
         // Botões e elementos
         const recordBtn = document.getElementById("recordBtn");
         const sendAudioBtn = document.getElementById("sendAudioBtn");
+
+        // Elemento para a lista de usuários
+        const usersList = document.getElementById("users");
 
         // Permissão para gravar áudio
         navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
@@ -58,15 +68,20 @@
 
         // Iniciar gravação
         recordBtn.addEventListener("click", () => {
-            audioChunks = [];
-            mediaRecorder.start();
-            recordBtn.textContent = "🔴 Gravando (5s máx)...";
-            sendAudioBtn.classList.add("hidden");
-
-            // Parar automaticamente após 5 segundos
-            recordingTimeout = setTimeout(() => {
+            if (mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
-            }, 5000);
+            } else {
+                audioChunks = [];
+                mediaRecorder.start();
+                recordBtn.textContent = "🔴 Gravando (5s máx)...";
+                sendAudioBtn.classList.add("hidden");
+
+                recordingTimeout = setTimeout(() => {
+                    if (mediaRecorder.state === "recording") {
+                        mediaRecorder.stop();
+                    }
+                }, 5000);
+            }
         });
 
         // Enviar áudio para o servidor
@@ -75,8 +90,9 @@
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = () => {
-                socket.emit("audioMessage", reader.result);
-                addAudioMessage(reader.result, clientId); // Adiciona o áudio no chat localmente
+                const audioData = reader.result;
+                socket.emit("audioMessage", audioData);
+                addAudioMessage(audioData, clientId);
             };
             sendAudioBtn.classList.add("hidden");
         });
@@ -87,12 +103,51 @@
             const messageElement = document.createElement("div");
             messageElement.classList.add("p-2", "border", "border-gray-700", "rounded-lg", "mb-2");
 
+            const audioContainer = document.createElement("div");
+            audioContainer.classList.add("waveform-container");
+            messagesDiv.appendChild(messageElement);
             messageElement.innerHTML = `
                 <strong class="text-blue-400">${sender}:</strong>
-                <audio src="${audioSrc}" controls class="mt-1"></audio>
             `;
 
-            messagesDiv.appendChild(messageElement);
+            messageElement.appendChild(audioContainer);
+
+            // Cria o WaveSurfer
+            const waveSurfer = WaveSurfer.create({
+                container: audioContainer,
+                waveColor: 'rgb(99 102 241)', // cor da onda
+                progressColor: 'rgb(37 99 235)', // cor do progresso
+                barWidth: 3, // largura da barra da onda
+                barHeight: 1, // altura das barras
+                cursorColor: 'rgba(255, 255, 255, 0.5)',
+                responsive: true,
+            });
+
+            // Usando a URL base64 (reader.result) diretamente
+            waveSurfer.load(audioSrc); // Carrega o áudio no WaveSurfer
+
+            // Adicionar controle de play
+            const playButton = document.createElement("button");
+            playButton.textContent = "▶️ Reproduzir";
+            playButton.classList.add("mt-2", "px-4", "py-2", "bg-blue-600", "rounded-lg", "hover:bg-blue-700");
+            messageElement.appendChild(playButton);
+
+            // Evento para controlar a reprodução
+            playButton.addEventListener("click", () => {
+                if (waveSurfer.isPlaying()) {
+                    waveSurfer.pause();
+                    playButton.textContent = "▶️ Reproduzir";
+                } else {
+                    waveSurfer.play();
+                    playButton.textContent = "⏸️ Pausar";
+                }
+            });
+
+            // adicionar um evento quando acabar a reprodução do audio ir para o inicio e mudar o texto do botão
+            waveSurfer.on('finish', () => {
+                playButton.textContent = "▶️ Reproduzir";
+            });
+
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
@@ -120,7 +175,6 @@
             const input = document.getElementById("messageInput");
             if (input.value.trim() !== "") {
                 socket.emit("message", input.value);
-                addTextMessage(input.value, clientId);
                 input.value = "";
             }
         }
@@ -143,6 +197,17 @@
                 messageSound.play();
             }
             addTextMessage(data.message, data.id);
+        });
+
+        socket.on("update_users", (userList) => {
+            const usersUl = document.getElementById("users");
+            usersUl.innerHTML = ""; // Limpa a lista antes de atualizar
+
+            userList.forEach(userId => {
+                const li = document.createElement("li");
+                li.textContent = userId;
+                usersUl.appendChild(li);
+            });
         });
     </script>
 </body>

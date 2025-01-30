@@ -16,6 +16,9 @@ io.on("connection", (socket) => {
 
   console.log(`Novo cliente conectado: ${socket.id}`);
 
+  // Emite a lista de usuários online quando alguém se conecta
+  io.emit("update_users", Object.keys(clients)); // Atualiza todos os clientes conectados com a nova lista de usuários
+
   socket.on("new_user", () => {
     // Emite para todos os clientes, incluindo o novo
     io.emit("message", {
@@ -55,6 +58,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     delete clients[socket.id];
     console.log(`Cliente desconectado: ${socket.id}`);
+    io.emit("update_users", Object.keys(clients)); // Atualiza todos os clientes com a nova lista de usuários
   });
 });
 

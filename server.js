@@ -73,6 +73,19 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("hideTyping", userId);
   });
 
+  // Quando o servidor solicitar o vídeo de um usuário
+  socket.on("request_video_stream", (userId) => {
+    if (clients[userId]) {
+      // Envia o stream de vídeo do usuário para o solicitante
+      clients[userId].emit("send_video_stream", socket.id, socket.stream);
+    }
+  });
+
+  // Quando um usuário enviar seu stream de vídeo
+  socket.on("send_video_stream", (stream) => {
+    socket.stream = stream; // Armazena o stream recebido para esse usuário
+  });
+
   // Quando um cliente se desconecta
   socket.on("disconnect", () => {
     delete clients[socket.id];

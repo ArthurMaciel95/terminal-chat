@@ -250,6 +250,10 @@
                 };
             }
         });
+        socket.on("imageMessage", (imageData) => {
+            addImageMessage(imageData); // Exibe a imagem no chat
+        });
+
 
         function addImageMessage(imageSrc) {
             const messagesDiv = document.getElementById("messages");

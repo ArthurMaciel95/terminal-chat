@@ -54,9 +54,13 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("audioMessage", audioData);
   });
 
-  socket.on("imageMessage", (imageData) => {
-    // Envia a imagem para todos os clientes
-    io.emit("imageMessage", imageData);
+  // Enviar a mensagem de imagem para todos os outros usuários conectados
+  socket.on("imageMessage", (data) => {
+    // Envia a imagem com o remetente
+    io.emit("imageMessage", {
+      imageData: data.imageData, // Dados da imagem
+      sender: data.sender, // Remetente
+    });
   });
 
   // Quando um cliente se desconecta

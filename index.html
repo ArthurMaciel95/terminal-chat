@@ -245,13 +245,13 @@
 
                 reader.onloadend = () => {
                     const imageData = reader.result; // Dados da imagem ou GIF em base64
-                    socket.emit("imageMessage", imageData); // Envia a imagem para o servidor
-                    addImageMessage(imageData); // Exibe a imagem no chat
+                    socket.emit("imageMessage", { imageData, sender: clientId }); // Envia a imagem com o remetente
+                    addImageMessage(imageData, clientId); // Exibe a imagem no chat
                 };
             }
         });
-        socket.on("imageMessage", (imageData) => {
-            addImageMessage(imageData); // Exibe a imagem no chat
+        socket.on("imageMessage", (data) => {
+            addImageMessage(data.imageData, data.sender); // Exibe a imagem com o remetente
         });
 
 
@@ -259,6 +259,11 @@
             const messagesDiv = document.getElementById("messages");
             const messageElement = document.createElement("div");
             messageElement.classList.add("p-2", "border", "border-gray-700", "rounded-lg", "mb-2");
+
+            // Adiciona o nome do remetente
+            messageElement.innerHTML = `
+        <strong class="text-blue-400">${sender}:</strong>
+    `;
 
             const imageElement = document.createElement("img");
             imageElement.src = imageSrc; // Usando a URL base64

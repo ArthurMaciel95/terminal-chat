@@ -47,6 +47,10 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("audioMessage", (audioData) => {
+    socket.broadcast.emit("audioMessage", audioData);
+  });
+
   // Quando um cliente se desconecta
   socket.on("disconnect", () => {
     delete clients[socket.id];

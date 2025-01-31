@@ -87,9 +87,9 @@
         let mediaRecorder;
         let audioChunks = [];
         let recordingTimeout;
-        const messageSound = new Audio('./noti.mp3');
-        const typingSound = new Audio('./typing.mp3')
-        const callingSound = new Audio('./calling.mp3')
+        const messageSound = new Audio('./audio/noti.mp3');
+        const typingSound = new Audio('./audio/typing.mp3')
+        const callingSound = new Audio('./audio/calling.mp3')
 
 
         callingSound.loop = true; // Define para tocar em loop
@@ -609,7 +609,7 @@
             callPopup.innerHTML = `
         <div class="bg-gray-700 p-5 rounded-lg shadow-lg text-center">
             <div class="flex items-center justify-center bg-gray-700 rounded-lg mb-4">
-                <img src="/img/bob-esponja-dancando.gif" class="w-24 h-24 rounded-lg" alt="Avatar">
+                <img src="./img/bob-esponja-dancando.gif" class="w-24 h-24 rounded-lg" alt="Avatar">
             </div>
             <p class="text-lg font-bold text-white">${fromUserId} está te ligando...</p>
             <div class="mt-4 flex justify-center space-x-4">

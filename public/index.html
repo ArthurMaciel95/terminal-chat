@@ -25,7 +25,7 @@
 
 <body class="bg-gray-900 text-white flex items-center justify-center h-screen gap-10">
     <div class="w-full max-w-2xl bg-gray-800 p-6 rounded-lg shadow-lg">
-        <div id="messages" class="h-80 overflow-y-auto p-2 border-b border-gray-700"></div>
+        <div id="messages" class="h-80 overflow-y-auto p-2 border rounded-lg border-gray-700"></div>
 
         <!-- Caixa de entrada de mensagem -->
         <div class=" flex flex-col">
@@ -77,31 +77,18 @@
             <!-- As câmeras dos usuários serão adicionadas aqui -->
         </div>
         <h2 class="text-lg font-bold text-blue-400">Usuários Online</h2>
-        <ul id="users" class="mt-2"></ul>
+        <ul id="users" class="mt-2 max-h-[400px] overflow-y-auto"></ul>
 
     </div>
     <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
     <script>
         const socket = io("https://terminal-chat-production-16e8.up.railway.app/");
         let clientId = "";
-        let mediaRecorder;
-        let audioChunks = [];
-        let recordingTimeout;
-        const messageSound = new Audio('./audio/noti.mp3');
+
+
         const typingSound = new Audio('./audio/typing.mp3')
         const callingSound = new Audio('./audio/calling.mp3')
 
-
-        callingSound.loop = true; // Define para tocar em loop
-
-        function startRinging() {
-            callingSound.play().catch(error => console.error("Erro ao reproduzir som:", error));
-        }
-
-        function stopRinging() {
-            callingSound.pause();
-            callingSound.currentTime = 0; // Reinicia o som para o começo
-        }
 
         // Função para parar o som
         function stopTypingSound() {
@@ -110,8 +97,7 @@
         }
 
         // Botões e elementos
-        const recordBtn = document.getElementById("recordBtn");
-        const sendAudioBtn = document.getElementById("sendAudioBtn");
+
         // const startWebcamButton = document.getElementById("startWebcam");
         const webcamsContainer = document.getElementById("webcamsContainer");
         // Elemento para a lista de usuários
@@ -123,54 +109,6 @@
         let videoElement = null;
         let mediaStream = null;
 
-        // Função para acessar a webcam do usuário
-        // function startWebcam() {
-        // Verifica se o stream já foi iniciado
-        // if (mediaStream) {
-        //     alert('Câmera já está ativa.');
-        //     console.log('Câmera já está ativa.');
-        //     return; // Se já tiver um stream, não faz nada
-        // }
-
-        // Solicita a permissão para usar a câmera do usuário
-        //     navigator.mediaDevices.getUserMedia({ video: true })
-        //         .then((stream) => {
-        //             // Verifica se o elemento de vídeo já existe, se não, cria um novo
-        //             if (!videoElement) {
-        //                 videoElement = document.createElement('video');
-        //                 videoElement.autoplay = true;
-        //                 videoElement.muted = true; // Muta o vídeo para evitar feedback de áudio
-        //                 videoElement.id = "webcam";
-        //                 videoElement.classList.add('w-full', 'h-auto', 'rounded-lg', 'border', 'border-gray-700');
-        //             }
-
-        //             // Atribui o stream de vídeo ao elemento de vídeo
-        //             videoElement.srcObject = stream;
-
-        //             // Cria uma coluna para este vídeo
-        //             const webcamColumn = document.createElement('div');
-        //             webcamColumn.classList.add('video-column', 'w-full', 'lg:w-1/3'); // Controle de colunas (responsivo)
-        //             webcamColumn.appendChild(videoElement);
-
-        //             // Adiciona a coluna de vídeo no container
-        //             const webcamsContainer = document.getElementById('webcamsContainer'); // Certifique-se de ter esse container no HTML
-        //             webcamsContainer.appendChild(webcamColumn);
-
-        //             // Salva o stream para evitar múltiplas conexões
-        //             mediaStream = stream;
-
-        //             // Envia o stream para o servidor assim que o vídeo for adicionado
-        //             socket.emit("new_user", { clientId, stream });
-        //         })
-        //         .catch((error) => {
-        //             console.error('Erro ao acessar a câmera: ', error);
-        //         });
-        // }
-
-        // Quando o botão for clicado, chama a função para ativar a webcam
-        // startWebcamButton.addEventListener("click", startWebcam);
-
-        // Quando um novo usuário se conectar, cria-se uma coluna para o vídeo dele
         socket.on("new_user", (userId) => {
             console.log(`Novo usuário conectado: ${userId}`);
 
@@ -190,114 +128,6 @@
             if (videoColumn) {
                 videoColumn.parentElement.remove(); // Remove o contêiner do vídeo
             }
-        });
-
-        // Permissão para gravar áudio
-        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-            mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.ondataavailable = (event) => {
-                audioChunks.push(event.data);
-            };
-
-            mediaRecorder.onstop = () => {
-                sendAudioBtn.classList.remove("hidden");
-                recordBtn.textContent = "🎤 Gravar Áudio";
-            };
-        });
-
-        // Iniciar gravação
-        recordBtn.addEventListener("click", () => {
-            if (mediaRecorder.state === "recording") {
-                mediaRecorder.stop();
-            } else {
-                audioChunks = [];
-                mediaRecorder.start();
-                recordBtn.textContent = "🔴 Gravando (5s máx)...";
-                sendAudioBtn.classList.add("hidden");
-
-                recordingTimeout = setTimeout(() => {
-                    if (mediaRecorder.state === "recording") {
-                        mediaRecorder.stop();
-                    }
-                }, 5000);
-            }
-        });
-
-        // Enviar áudio para o servidor
-        sendAudioBtn.addEventListener("click", () => {
-            const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = () => {
-                const audioData = reader.result;
-                socket.emit("audioMessage", audioData);
-                addAudioMessage(audioData, clientId);
-            };
-            sendAudioBtn.classList.add("hidden");
-        });
-
-        // Adicionar mensagem de áudio no chat
-        function addAudioMessage(audioSrc, sender) {
-            const messagesDiv = document.getElementById("messages");
-            const messageElement = document.createElement("div");
-            messageElement.classList.add("p-2", "border", "border-gray-700", "rounded-lg", "mb-2");
-
-            const audioContainer = document.createElement("div");
-            audioContainer.classList.add("waveform-container");
-            messagesDiv.appendChild(messageElement);
-            messageElement.innerHTML = `
-                <strong class="text-blue-400">${sender}:</strong>
-            `;
-
-            messageElement.appendChild(audioContainer);
-
-            // Cria o WaveSurfer
-            const waveSurfer = WaveSurfer.create({
-                width: '100%', // Largura do WaveSurfer
-                height: 50, // Altura do WaveSurfer 
-                container: audioContainer,
-                waveColor: 'rgb(99 102 241)', // cor da onda
-                progressColor: 'rgb(37 99 235)', // cor do progresso
-                barWidth: 3, // largura da barra da onda
-                barHeight:
-                    1
-                , // altura das barras
-                cursorColor: 'rgba(255, 255, 255, 0.5)',
-                responsive: true,
-            });
-
-            // Usando a URL base64 (reader.result) diretamente
-            waveSurfer.load(audioSrc); // Carrega o áudio no WaveSurfer
-
-            // Adicionar controle de play
-            const playButton = document.createElement("button");
-            playButton.textContent = "▶️ Reproduzir";
-            playButton.classList.add("mt-2", "px-4", "py-2", "bg-blue-600", "rounded-lg", "hover:bg-blue-700");
-            messageElement.appendChild(playButton);
-
-            // Evento para controlar a reprodução
-            playButton.addEventListener("click", () => {
-                if (waveSurfer.isPlaying()) {
-                    waveSurfer.pause();
-                    playButton.textContent = "▶️ Reproduzir";
-                } else {
-                    waveSurfer.play();
-                    playButton.textContent = "⏸️ Pausar";
-                }
-            });
-
-            // adicionar um evento quando acabar a reprodução do audio ir para o inicio e mudar o texto do botão
-            waveSurfer.on('finish', () => {
-                playButton.textContent = "▶️ Reproduzir";
-            });
-
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        // Receber áudio de outros usuários
-        socket.on("audioMessage", (audioData) => {
-            addAudioMessage(audioData, "Outro usuário");
         });
 
         socket.on("connect", () => {
@@ -332,13 +162,20 @@
         function addTextMessage(message, sender) {
             const messagesDiv = document.getElementById("messages");
             const messageElement = document.createElement("div");
-            messageElement.classList.add("p-2", "border", "border-gray-700", "rounded-lg", "mb-2");
-
             const userColor = generateColorFromId(sender); // Obtém a cor do usuário
-
-            messageElement.innerHTML = `
-        <strong style="color: ${userColor};">${sender}:</strong> ${message}
+            if (sender === 'Servidor') {
+                messageElement.innerHTML = `
+        <small class="text-gray-500" >${sender}: ${message} </small>
     `;
+            } else {
+                messageElement.innerHTML = `
+       <span class="flex"> <p style="color: ${userColor}; margin-right:5px;">${sender}:</p> ${message}</span>
+    `;
+            }
+
+
+
+
 
             messagesDiv.appendChild(messageElement);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -382,105 +219,8 @@
                     });
                 }
 
-
-
-
                 usersUl.appendChild(li);
             });
-        });
-
-        // Elementos do DOM
-        const sendImageBtn = document.getElementById("sendImageBtn");
-        const imageInput = document.getElementById("imageInput");
-
-        // Enviar a imagem ou GIF para o servidor
-        sendImageBtn.addEventListener("click", () => {
-            imageInput.click(); // Abre o seletor de arquivos
-        });
-
-        // Tamanho máximo permitido (300 KB)
-        const MAX_FILE_SIZE = 300 * 1024; // 300 KB em bytes
-
-        imageInput.addEventListener("change", (event) => {
-            const file = event.target.files[0];
-
-            if (file) {
-                // Verificar o tamanho do arquivo
-                if (file.size > MAX_FILE_SIZE) {
-                    alert("O arquivo é muito grande. O tamanho máximo permitido é 300 KB.");
-                    return; // Impede o envio do arquivo
-                }
-
-                const reader = new FileReader();
-                reader.readAsDataURL(file); // Converte o arquivo para base64
-
-                reader.onloadend = () => {
-                    const imageData = reader.result; // Dados da imagem ou GIF em base64
-
-                    // Emitir a imagem junto com o remetente
-                    socket.emit("imageMessage", {
-                        imageData: imageData,
-                        sender: clientId // Usando o ID do cliente como remetente
-                    });
-
-                    //addImageMessage(imageData, clientId); // Exibe a imagem no chat
-                };
-            }
-        });
-        // Para receber a imagem do servidor
-        socket.on("imageMessage", (data) => {
-            addImageMessage(data.imageData, data.sender); // Exibe a imagem no chat junto com o remetente
-        });
-
-
-
-        // Função para adicionar a imagem no chat
-        function addImageMessage(imageSrc, sender) {
-            const messagesDiv = document.getElementById("messages");
-            const messageElement = document.createElement("div");
-            messageElement.classList.add("p-2", "border", "border-gray-700", "rounded-lg", "mb-2");
-
-            messageElement.innerHTML = `
-        <strong class="text-blue-400">${sender}:</strong>
-    `;
-
-            const imageElement = document.createElement("img");
-            imageElement.src = imageSrc; // Usando a URL base64
-            imageElement.classList.add("max-w-full", "rounded-lg");
-
-            messageElement.appendChild(imageElement);
-            messagesDiv.appendChild(messageElement);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        // Seletores do DOM
-        const emojiBtn = document.getElementById("emojiBtn");
-        const emojiPicker = document.getElementById("emojiPicker");
-        const emojiContainer = document.getElementById("emojiContainer");
-        const messageInput = document.getElementById("messageInput");
-
-        // Inicializar o seletor de emojis
-        const picker = new EmojiMart.Picker({
-            onSelect: (emoji) => {
-                // Inserir o emoji na caixa de entrada de mensagem
-                messageInput.value += emoji.native;
-                emojiPicker.classList.add("hidden"); // Fechar o seletor após selecionar o emoji
-            }
-        });
-
-        // Inserir o seletor de emojis no container
-        emojiContainer.appendChild(picker);
-
-        // Mostrar/Esconder o seletor de emojis
-        emojiBtn.addEventListener("click", () => {
-            emojiPicker.classList.toggle("hidden");
-        });
-
-        // Fechar o seletor de emojis se clicar fora dele
-        document.addEventListener("click", (event) => {
-            if (!emojiPicker.contains(event.target) && !emojiBtn.contains(event.target)) {
-                emojiPicker.classList.add("hidden");
-            }
         });
 
         let typingTimeout;
@@ -488,7 +228,6 @@
 
         // Função para animar o indicador de digitação
         function typingEffectAnimation(isTyping) {
-
 
             if (isTyping) {
                 typingIndicator.classList.remove('opacity-0', 'scale-95');
@@ -538,174 +277,11 @@
         }
 
 
-        // Variáveis globais
-        let localStream;
-        let peerConnection;
-        const serverConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }; // Configuração STUN
-        const webcamElement = document.getElementById('webcam'); // Certifique-se de que o ID do elemento de vídeo está correto
-        // Função para acessar a webcam do usuário
-        async function startWebcam() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-
-                if (!localStream) {
-                    console.error("Erro ao capturar a webcam.");
-                    return;
-                }
-
-                const videoElement = document.createElement('video');
-                videoElement.srcObject = localStream;
-                videoElement.autoplay = true;
-                videoElement.muted = true;
-                document.getElementById("webcamsContainer").appendChild(videoElement);
-
-                console.log("Webcam iniciada com sucesso!");
-            } catch (error) {
-                console.error("Erro ao acessar a câmera:", error);
-            }
-        }
-
-
-
-
-        async function startCall(toUserId) {
-            if (!localStream) {
-                console.error("Erro: localStream não está inicializado. Iniciando agora...");
-                alert("Ativando a webcam...");
-                await startWebcam();
-            }
-
-            peerConnection = new RTCPeerConnection(serverConfig);
-
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) socket.emit("ice-candidate", event.candidate, toUserId);
-            };
-
-            peerConnection.ontrack = event => showRemoteVideo(event.streams[0]);
-
-            peerConnection.createOffer().then(offer => {
-                return peerConnection.setLocalDescription(offer);
-            }).then(() => {
-                socket.emit("offer", peerConnection.localDescription, toUserId);
-            }).catch(err => console.error("Erro ao criar oferta:", err));
-        }
-
-        function showRemoteVideo(stream) {
-            const remoteVideo = document.createElement('video');
-            remoteVideo.srcObject = stream;
-            remoteVideo.autoplay = true;
-            remoteWebcam.appendChild(remoteVideo);
-        }
-
-        // Exibir popup de chamada recebida
-        socket.on("offer", (offer, fromUserId) => showIncomingCallPopup(fromUserId, offer));
-        function showIncomingCallPopup(fromUserId, offer) {
-            const callPopup = document.createElement("div");
-            startRinging();
-            callPopup.id = "callPopup";
-            callPopup.classList.add("fixed", "top-0", "left-0", "w-full", "h-full", "flex", "items-center", "justify-center", "bg-gray-900", "bg-opacity-75");
-            callPopup.innerHTML = `
-        <div class="bg-gray-700 p-5 rounded-lg shadow-lg text-center">
-            <div class="flex items-center justify-center bg-gray-700 rounded-lg mb-4">
-                <img src="./img/bob-esponja-dancando.gif" class="w-24 h-24 rounded-lg" alt="Avatar">
-            </div>
-            <p class="text-lg font-bold text-white">${fromUserId} está te ligando...</p>
-            <div class="mt-4 flex justify-center space-x-4">
-                <button id="acceptCall" onclick="" class="bg-green-500 text-white px-4 py-2 rounded">Aceitar</button>
-                <button id="rejectCall" onclick="" class="bg-red-500 text-white px-4 py-2 rounded">Rejeitar</button>
-            </div>
-        </div>
-    `;
-            document.body.appendChild(callPopup);
-            // Lógica para aceitar a chamada
-            document.getElementById("acceptCall").addEventListener("click", async () => {
-                await startCall();  // Função para iniciar a webcam
-                stopRinging();
-                acceptCall(offer, fromUserId);  // Função para aceitar a chamada
-                document.body.removeChild(callPopup);  // Remove o popup
-            });
-            document.getElementById("rejectCall").addEventListener("click", () => {
-                document.body.removeChild(callPopup);
-                stopRinging();
-                socket.emit("call_rejected", fromUserId);
-            });
-        }
-
-        socket.on("call_rejected", (callerId) => {
-            alert(`A chamada de ${callerId} foi rejeitada.`);
-            // Aqui você pode adicionar mais lógica para tratar a rejeição da chamada.
-        });
-
-        async function acceptCall(offer, fromUserId) {
-            peerConnection = new RTCPeerConnection(serverConfig);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit("answer", peerConnection.localDescription, fromUserId);
-            peerConnection.onicecandidate = event => { if (event.candidate) socket.emit("ice-candidate", event.candidate, fromUserId); };
-            peerConnection.ontrack = event => showRemoteVideo(event.streams[0]);
-        }
-
-        async function rejectcall() {
-            socket.emit("call_rejected", fromUserId);
-
-        }
-
-        // Evento para receber a oferta de um usuário (enviada pelo servidor)
-        // socket.on("offer", (offer, fromUserId) => {
-        //     peerConnection = new RTCPeerConnection(serverConfig);
-
-        //     // Adiciona o stream local à conexão
-        //     localStream.getTracks().forEach(track => {
-        //         peerConnection.addTrack(track, localStream);
-        //     });
-
-        //     // Define a oferta recebida
-        //     peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-
-        //     // Cria uma resposta (SDP)
-        //     peerConnection.createAnswer()
-        //         .then(answer => {
-        //             return peerConnection.setLocalDescription(answer); // Define a descrição local com a resposta
-        //         })
-        //         .then(() => {
-        //             // Envia a resposta de volta ao servidor para o usuário que fez a oferta
-        //             socket.emit("answer", peerConnection.localDescription, fromUserId);
-        //         })
-        //         .catch(err => console.error("Erro ao criar resposta:", err));
-
-        //     // Lida com candidatos ICE
-        //     peerConnection.onicecandidate = event => {
-        //         if (event.candidate) {
-        //             // Envia os candidatos ICE para o servidor
-        //             socket.emit("ice-candidate", event.candidate, fromUserId);
-        //         }
-        //     };
-
-        //     // Recebe o stream remoto do outro usuário
-        //     peerConnection.ontrack = (event) => {
-        //         const remoteVideo = document.createElement('video');
-        //         remoteVideo.srcObject = event.streams[0];
-        //         remoteVideo.autoplay = true;
-        //         document.getElementById("remoteWebcam").appendChild(remoteVideo);
-        //     };
-        // });
-
-        // Evento para receber a resposta de um usuário (enviada pelo servidor)
-        socket.on("answer", (answer, fromUserId) => {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        });
-
-        // Evento para receber os candidatos ICE de outro usuário
-        socket.on("ice-candidate", (candidate, fromUserId) => {
-            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        });
-
     </script>
-
+    <script src="./image.js"></script>
+    <script src="./emoji.js"></script>
+    <script src="./audio.js"></script>
+    <script src="./webcam.js"></script>
 </body>
 
 </html>
